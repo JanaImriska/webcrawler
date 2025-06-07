@@ -26,7 +26,7 @@ public class MultiThreadingWebcrawler {
 
     public static List<String> lookupLinks(String startingPoint) {
 
-        Set<String> resultURls = Collections.synchronizedSet(new HashSet<>());
+        Set<String> broken = Collections.synchronizedSet(new HashSet<>());
         Map<String, Link> results = Collections.synchronizedMap(new HashMap<>());
         int processors = Runtime.getRuntime().availableProcessors();
         System.out.println(Integer.toString(processors) + " processor"
@@ -40,11 +40,16 @@ public class MultiThreadingWebcrawler {
                 0L, TimeUnit.MILLISECONDS,
                 workQueue);
 
-        RecursiveMTWebCrawler recursiveMTWebCrawler = new RecursiveMTWebCrawler(startingPoint, results, 6, resultURls, executorService);
+        RecursiveMTWebCrawler recursiveMTWebCrawler = new RecursiveMTWebCrawler(startingPoint, results, 6, broken, executorService);
         executorService.submit(recursiveMTWebCrawler);
 
         ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
         scheduledExecutorService.scheduleAtFixedRate(new QueueChecker(workQueue, executorService), 30, 30, TimeUnit.SECONDS);
+        try {
+            scheduledExecutorService.awaitTermination(4, TimeUnit.MINUTES);
+        } catch (Exception e) {
+
+        }
 
         return results.keySet().stream().toList();
     }
