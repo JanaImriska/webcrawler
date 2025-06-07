@@ -15,14 +15,16 @@ import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 
 public class RecursiveMTWebCrawler implements Runnable {
 
+    private static String baseRef;
+
     private final ExecutorService executorService;
-    private Map<String, Link> resultURLs;
+    private ConcurrentHashMap<String, Link> resultURLs;
 
     private Set<String> brokenLinks;
 
@@ -30,7 +32,7 @@ public class RecursiveMTWebCrawler implements Runnable {
     private int counter;
 
 
-    public RecursiveMTWebCrawler(String start, Map<String, Link> resultURLs, int counter, Set<String> brokenLinks, ExecutorService executorService) {
+    public RecursiveMTWebCrawler(String start, ConcurrentHashMap<String, Link> resultURLs, int counter, Set<String> brokenLinks, ExecutorService executorService) {
         this.start = start;
         this.resultURLs = resultURLs;
         this.counter = counter;
@@ -61,22 +63,22 @@ public class RecursiveMTWebCrawler implements Runnable {
             HTMLEditorKit htmlEditorKit = new HTMLEditorKit();
             HTMLDocument defaultDocument = (HTMLDocument) htmlEditorKit.createDefaultDocument();
             htmlEditorKit.read(in, defaultDocument, 0);
-            //find baseHref
+
             HTMLDocument.Iterator it = defaultDocument.getIterator(HTML.Tag.A);
             counter--;
             while (it.isValid()) {
                 SimpleAttributeSet s = (SimpleAttributeSet) it.getAttributes();
 
                 String link = (String) s.getAttribute(HTML.Attribute.HREF);
-                String linkText = defaultDocument.getText(it.getStartOffset(), it.getEndOffset() - it.getStartOffset());
+                String title = defaultDocument.getText(it.getStartOffset(), it.getEndOffset() - it.getStartOffset());
                 if (link != null) {
                     if (!link.startsWith("http")) {
                         link = urlString + link.substring(1);
                     }
 
-                    if (link.startsWith("https://orf.at") && !brokenLinks.contains(link) && !resultURLs.containsKey(link)) {
+                    if (link.startsWith(RecursiveMTWebCrawler.baseRef) && !brokenLinks.contains(link) && !resultURLs.containsKey(link)) {
                         // Add the link to the result list
-                        resultURLs.put(link, new Link(link, linkText));
+                        resultURLs.put(link, new Link(title, link));
                         executorService.submit(new RecursiveMTWebCrawler(link, resultURLs, counter, brokenLinks, executorService));
                     }
                 }
@@ -88,7 +90,6 @@ public class RecursiveMTWebCrawler implements Runnable {
             return resultURLs.keySet().stream().toList();
         }
 
-
         return resultURLs.keySet().stream().toList();
     }
 
@@ -98,7 +99,15 @@ public class RecursiveMTWebCrawler implements Runnable {
         if (Strings.isNotBlank(start) && counter > 0) {
             lookupLinks(start);
         }
-        System.out.println(" results: " + resultURLs.size() + " counter: " + counter + " brokenLinks: " + brokenLinks.size());
+//        System.out.println(" results: " + resultURLs.size() + " counter: " + counter + " brokenLinks: " + brokenLinks.size());
     }
+
+
+    public static void setBaseRef(String baseRef) {
+        if (RecursiveMTWebCrawler.baseRef == null) {
+            RecursiveMTWebCrawler.baseRef = baseRef;
+        }
+    }
+
 
 }

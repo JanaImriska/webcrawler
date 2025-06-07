@@ -1,61 +1,74 @@
 package demo;
 
-import ch.qos.logback.core.util.TimeUtil;
-
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URLConnection;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
-import java.util.concurrent.TimeUnit;
 
 public class MultiThreadingWebcrawler {
 
     public static void main(String[] args) {
-
-        String startingPoint = "https://orf.at/";
-        System.out.println(startingPoint);
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Type a valid URL to scan: ");
+        String startingPoint = scanner.nextLine();
+        if (!isValidURL(startingPoint)) {
+            System.out.println("the URL is not valid, a default URL will be used.");
+            startingPoint = "https://orf.at/";
+        }
+        System.out.println("valid URL:" + startingPoint);
+        RecursiveMTWebCrawler.setBaseRef(startingPoint);
         System.out.println("------------------------------------------------");
         long startTime = System.currentTimeMillis();
-        List<String> lookupedLinks = lookupLinks(startingPoint);
-        List<String> sortedList = lookupedLinks.stream().sorted().collect(Collectors.toList());
+        List<Link> lookupedLinks = lookupLinks(startingPoint);
         long endTime = System.currentTimeMillis();
-        System.out.println("Link look up took " + (endTime - startTime)/1000 +
-                " seconds.");
+        System.out.println("Web Crawl took " + (endTime - startTime)/1000 + " seconds.");
 
-        System.out.println(sortedList);
+        System.out.println("Sorted list by link text: ");
+        lookupedLinks.stream().sorted(Comparator.comparing(o -> ((Link) o).title().toLowerCase())).forEach(System.out::println);
     }
 
-    public static List<String> lookupLinks(String startingPoint) {
+    private static boolean isValidURL(String urlString) {
+        try {
+            URLConnection connection = URI.create(urlString).toURL().openConnection();
+            connection.connect();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
-        Set<String> broken = Collections.synchronizedSet(new HashSet<>());
-        Map<String, Link> results = Collections.synchronizedMap(new HashMap<>());
+    public static List<Link> lookupLinks(String startingPoint) {
+
         int processors = Runtime.getRuntime().availableProcessors();
-        System.out.println(Integer.toString(processors) + " processor"
-                + (processors != 1 ? "s are " : " is ")
-                + "available");
-        results.put(startingPoint, new Link(startingPoint, startingPoint));
 
-        int nThreads = 4;
         LinkedBlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>();
-        ExecutorService executorService = new ThreadPoolExecutor(nThreads, nThreads,
+        ExecutorService executorService = new ThreadPoolExecutor(processors, processors,
                 0L, TimeUnit.MILLISECONDS,
                 workQueue);
 
+        ConcurrentHashMap<String, Link> results = new ConcurrentHashMap();
+        Set<String> broken = ConcurrentHashMap.newKeySet();;
+        results.put(startingPoint, new Link(startingPoint, startingPoint));
         RecursiveMTWebCrawler recursiveMTWebCrawler = new RecursiveMTWebCrawler(startingPoint, results, 8, broken, executorService);
         executorService.submit(recursiveMTWebCrawler);
+
+        ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+        CountDownLatch onOff = new CountDownLatch(1);
+        scheduledExecutorService.scheduleAtFixedRate(new QueueChecker(workQueue, executorService, onOff), 10, 10, TimeUnit.SECONDS);
+
+
         try {
-            TimeUnit.SECONDS.sleep(10);
-
-            while (!workQueue.isEmpty()) {
-                System.out.println("checking queue. queue size:  " + workQueue.size());
-                TimeUnit.SECONDS.sleep(10);
-            }
-
-            executorService.shutdown();
+            onOff.await();
+            executorService.awaitTermination(5, TimeUnit.MINUTES);
+            scheduledExecutorService.shutdown();
+            scheduledExecutorService.awaitTermination(1, TimeUnit.MINUTES);
         } catch (InterruptedException e ) {
             System.out.println(e);
         }
 
-        return results.keySet().stream().toList();
+        return results.values().stream().toList();
     }
 
 

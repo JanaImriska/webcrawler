@@ -1,14 +1,16 @@
 package demo;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public record QueueChecker (LinkedBlockingQueue<Runnable> workQueue, ExecutorService executorService) implements Runnable {
+public record QueueChecker (LinkedBlockingQueue<Runnable> workQueue, ExecutorService executorService, CountDownLatch countDownLatch) implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("checking queue. queue size:  " + workQueue.size());
+
         if (workQueue.isEmpty()) {
+            countDownLatch.countDown();
             executorService.shutdown();
         }
     }
