@@ -1,4 +1,6 @@
-package demo;
+package nothread;
+
+import demo.Link;
 
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.html.HTML;
@@ -14,14 +16,14 @@ import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.RecursiveAction;
 
-public class RecursiveWebCrawler extends RecursiveAction {
+public class RecursiveCrawler extends RecursiveAction {
 
     private Map<String, Link> resultURLs = Collections.synchronizedMap(new HashMap<>());
     private ConcurrentLinkedQueue<String> queue;
 
     private int counter;
 
-    public RecursiveWebCrawler(ConcurrentLinkedQueue<String> queue, int depth) {
+    public RecursiveCrawler(ConcurrentLinkedQueue<String> queue, int depth) {
         this.queue = queue;
         this.counter = depth;
     }

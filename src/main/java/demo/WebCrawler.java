@@ -19,7 +19,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 
-public class RecursiveMTWebCrawler implements Runnable {
+public class WebCrawler implements Runnable {
 
     private static String baseRef;
 
@@ -32,7 +32,7 @@ public class RecursiveMTWebCrawler implements Runnable {
     private int counter;
 
 
-    public RecursiveMTWebCrawler(String start, ConcurrentHashMap<String, Link> resultURLs, int counter, Set<String> brokenLinks, ExecutorService executorService) {
+    public WebCrawler(String start, ConcurrentHashMap<String, Link> resultURLs, int counter, Set<String> brokenLinks, ExecutorService executorService) {
         this.start = start;
         this.resultURLs = resultURLs;
         this.counter = counter;
@@ -76,10 +76,10 @@ public class RecursiveMTWebCrawler implements Runnable {
                         link = urlString + link.substring(1);
                     }
 
-                    if (link.startsWith(RecursiveMTWebCrawler.baseRef) && !brokenLinks.contains(link) && !resultURLs.containsKey(link)) {
+                    if (link.startsWith(WebCrawler.baseRef) && !brokenLinks.contains(link) && !resultURLs.containsKey(link)) {
                         // Add the link to the result list
                         resultURLs.put(link, new Link(title, link));
-                        executorService.submit(new RecursiveMTWebCrawler(link, resultURLs, counter, brokenLinks, executorService));
+                        executorService.submit(new WebCrawler(link, resultURLs, counter, brokenLinks, executorService));
                     }
                 }
                 it.next();
@@ -104,8 +104,8 @@ public class RecursiveMTWebCrawler implements Runnable {
 
 
     public static void setBaseRef(String baseRef) {
-        if (RecursiveMTWebCrawler.baseRef == null) {
-            RecursiveMTWebCrawler.baseRef = baseRef;
+        if (WebCrawler.baseRef == null) {
+            WebCrawler.baseRef = baseRef;
         }
     }
 

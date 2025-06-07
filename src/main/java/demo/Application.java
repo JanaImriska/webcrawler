@@ -1,31 +1,29 @@
 package demo;
 
-import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URLConnection;
 import java.util.*;
 import java.util.concurrent.*;
 
-public class MultiThreadingWebcrawler {
+public class Application {
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
         System.out.println("Type a valid URL to scan: ");
         String startingPoint = scanner.nextLine();
         if (!isValidURL(startingPoint)) {
-            System.out.println("the URL is not valid, a default URL will be used.");
+            System.out.println("The URL is not valid, a default URL will be used.");
             startingPoint = "https://orf.at/";
         }
         System.out.println("valid URL:" + startingPoint);
-        RecursiveMTWebCrawler.setBaseRef(startingPoint);
+        WebCrawler.setBaseRef(startingPoint);
         System.out.println("------------------------------------------------");
         long startTime = System.currentTimeMillis();
         List<Link> lookupedLinks = lookupLinks(startingPoint);
         long endTime = System.currentTimeMillis();
         System.out.println("Web Crawl took " + (endTime - startTime)/1000 + " seconds.");
 
-        System.out.println("Sorted list by link text: ");
+        System.out.println("Sorted list by link title: ");
         lookupedLinks.stream().sorted(Comparator.comparing(o -> ((Link) o).title().toLowerCase())).forEach(System.out::println);
     }
 
@@ -51,8 +49,8 @@ public class MultiThreadingWebcrawler {
         ConcurrentHashMap<String, Link> results = new ConcurrentHashMap();
         Set<String> broken = ConcurrentHashMap.newKeySet();;
         results.put(startingPoint, new Link(startingPoint, startingPoint));
-        RecursiveMTWebCrawler recursiveMTWebCrawler = new RecursiveMTWebCrawler(startingPoint, results, 8, broken, executorService);
-        executorService.submit(recursiveMTWebCrawler);
+        WebCrawler webCrawler = new WebCrawler(startingPoint, results, 8, broken, executorService);
+        executorService.submit(webCrawler);
 
         ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
         CountDownLatch onOff = new CountDownLatch(1);
