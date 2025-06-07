@@ -1,4 +1,4 @@
-package demo;
+package webcrawl;
 
 import org.apache.logging.log4j.util.Strings;
 

@@ -1,6 +1,6 @@
 package nothread;
 
-import demo.Link;
+import webcrawl.Link;
 
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.html.HTML;

@@ -1,4 +1,4 @@
-package demo;
+package webcrawl;
 
 import java.net.URI;
 import java.net.URLConnection;
