@@ -40,15 +40,19 @@ public class MultiThreadingWebcrawler {
                 0L, TimeUnit.MILLISECONDS,
                 workQueue);
 
-        RecursiveMTWebCrawler recursiveMTWebCrawler = new RecursiveMTWebCrawler(startingPoint, results, 6, broken, executorService);
+        RecursiveMTWebCrawler recursiveMTWebCrawler = new RecursiveMTWebCrawler(startingPoint, results, 8, broken, executorService);
         executorService.submit(recursiveMTWebCrawler);
-
-        ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
-        scheduledExecutorService.scheduleAtFixedRate(new QueueChecker(workQueue, executorService), 30, 30, TimeUnit.SECONDS);
         try {
-            scheduledExecutorService.awaitTermination(4, TimeUnit.MINUTES);
-        } catch (Exception e) {
+            TimeUnit.SECONDS.sleep(10);
 
+            while (!workQueue.isEmpty()) {
+                System.out.println("checking queue. queue size:  " + workQueue.size());
+                TimeUnit.SECONDS.sleep(10);
+            }
+
+            executorService.shutdown();
+        } catch (InterruptedException e ) {
+            System.out.println(e);
         }
 
         return results.keySet().stream().toList();
