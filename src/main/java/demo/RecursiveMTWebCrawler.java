@@ -17,10 +17,12 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RecursiveAction;
 
-public class RecursiveMTWebCrawler extends RecursiveAction {
+public class RecursiveMTWebCrawler implements Runnable {
 
+    private final ExecutorService executorService;
     private Map<String, Link> resultURLs;
     private ConcurrentLinkedQueue<String> queue;
 
@@ -30,28 +32,18 @@ public class RecursiveMTWebCrawler extends RecursiveAction {
     private int counter;
 
 
-    public RecursiveMTWebCrawler(ConcurrentLinkedQueue<String> queue, String start, Map<String, Link> resultURLs, int counter, Set<String> brokenLinks) {
+    public RecursiveMTWebCrawler(ConcurrentLinkedQueue<String> queue, String start, Map<String, Link> resultURLs, int counter, Set<String> brokenLinks, ExecutorService executorService) {
         this.queue = queue;
         this.start = start;
         this.resultURLs = resultURLs;
         this.counter = counter;
         this.brokenLinks = brokenLinks;
-    }
-
-    @Override
-    protected void compute() {
-        if (Strings.isNotBlank(start)) {
-            lookupLinks(start);
-        }
-        while(!queue.isEmpty() && counter > 0) {
-            counter--;
-            invokeAll(new RecursiveMTWebCrawler(queue, queue.poll(), resultURLs, counter, brokenLinks));
-        }
+        this.executorService = executorService;
     }
 
 
     public List<String> lookupLinks(String urlString) {
-
+        System.out.println("processing " + urlString);
         URL url = null;
         URLConnection connection = null;
         try {
@@ -67,26 +59,24 @@ public class RecursiveMTWebCrawler extends RecursiveAction {
         }
 
         try (BufferedReader in = new BufferedReader(
-                     new InputStreamReader((InputStream) connection.getContent()))){
+                new InputStreamReader((InputStream) connection.getContent()))) {
 
-            String content = "";
-            String current;
             HTMLEditorKit htmlEditorKit = new HTMLEditorKit();
-            HTMLDocument defaultDocument = (HTMLDocument)htmlEditorKit.createDefaultDocument();
-            htmlEditorKit.read(in,defaultDocument,0);
+            HTMLDocument defaultDocument = (HTMLDocument) htmlEditorKit.createDefaultDocument();
+            htmlEditorKit.read(in, defaultDocument, 0);
             //find baseHref
             HTMLDocument.Iterator it = defaultDocument.getIterator(HTML.Tag.A);
             while (it.isValid()) {
-                SimpleAttributeSet s = (SimpleAttributeSet)it.getAttributes();
+                SimpleAttributeSet s = (SimpleAttributeSet) it.getAttributes();
 
-                String link = (String)s.getAttribute(HTML.Attribute.HREF);
+                String link = (String) s.getAttribute(HTML.Attribute.HREF);
                 String linkText = defaultDocument.getText(it.getStartOffset(), it.getEndOffset() - it.getStartOffset());
-                if(link != null) {
+                if (link != null) {
                     if (!link.startsWith("http")) {
                         link = urlString + link.substring(1);
                     }
 
-                    if ( !brokenLinks.contains(link) && !resultURLs.containsKey(link)) {
+                    if (link.startsWith("https://orf.at") && !brokenLinks.contains(link) && !resultURLs.containsKey(link)) {
                         // Add the link to the result list
                         resultURLs.put(link, new Link(link, linkText));
                         queue.add(link);
@@ -96,7 +86,7 @@ public class RecursiveMTWebCrawler extends RecursiveAction {
                 it.next();
             }
             in.close();
-            System.out.println("in queue: " + queue.size() + " results: " + resultURLs.size() + " counter: " + counter + " brokenLinks: " + brokenLinks.size());
+
         } catch (Exception e) {
             brokenLinks.add(urlString);
             return resultURLs.keySet().stream().toList();
@@ -105,4 +95,19 @@ public class RecursiveMTWebCrawler extends RecursiveAction {
 
         return resultURLs.keySet().stream().toList();
     }
+
+    @Override
+    public void run() {
+        System.out.println("Processing " + start + " in " + Thread.currentThread().getName());
+        if (Strings.isNotBlank(start)) {
+            lookupLinks(start);
+        }
+        counter--;
+        while (!queue.isEmpty() && counter > 0) {
+            executorService.submit(new RecursiveMTWebCrawler(queue, queue.poll(), resultURLs, counter, brokenLinks, executorService));
+        }
+
+        System.out.println("in queue: " + queue.size() + " results: " + resultURLs.size() + " counter: " + counter + " brokenLinks: " + brokenLinks.size());
+    }
+
 }

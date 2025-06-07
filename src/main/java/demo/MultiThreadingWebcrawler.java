@@ -1,8 +1,11 @@
 package demo;
 
+import ch.qos.logback.core.util.TimeUtil;
+
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
+import java.util.concurrent.TimeUnit;
 
 public class MultiThreadingWebcrawler {
 
@@ -11,9 +14,12 @@ public class MultiThreadingWebcrawler {
         String startingPoint = "https://orf.at/";
         System.out.println(startingPoint);
         System.out.println("------------------------------------------------");
+        long startTime = System.currentTimeMillis();
         List<String> lookupedLinks = lookupLinks(startingPoint);
-
         List<String> sortedList = lookupedLinks.stream().sorted().collect(Collectors.toList());
+        long endTime = System.currentTimeMillis();
+        System.out.println("Link look up took " + (endTime - startTime)/1000 +
+                " seconds.");
 
         System.out.println(sortedList);
     }
@@ -28,16 +34,17 @@ public class MultiThreadingWebcrawler {
                 + (processors != 1 ? "s are " : " is ")
                 + "available");
         results.put(startingPoint, new Link(startingPoint, startingPoint));
-        RecursiveMTWebCrawler recursiveMTWebCrawler = new RecursiveMTWebCrawler(queue, startingPoint, results, 8, resultURls);
 
-        ForkJoinPool forkJoinPool = new ForkJoinPool();
-
-        long startTime = System.currentTimeMillis();
-        forkJoinPool.invoke(recursiveMTWebCrawler);
-        long endTime = System.currentTimeMillis();
-
-        System.out.println("Link look up took " + (endTime - startTime) +
-                " milliseconds.");
+        ExecutorService executorService = Executors.newFixedThreadPool(4);
+        RecursiveMTWebCrawler recursiveMTWebCrawler = new RecursiveMTWebCrawler(queue, startingPoint, results, 6, resultURls, executorService);
+        executorService.submit(recursiveMTWebCrawler);
+        try {
+            executorService.awaitTermination(5, TimeUnit.MINUTES);
+            System.out.println("unprocessed queue " + queue.size());
+            executorService.shutdown();
+        } catch (InterruptedException e) {
+            System.out.println(e);
+        }
 
         return results.keySet().stream().toList();
     }
