@@ -4,7 +4,8 @@ Hence, please stick to the JDK and avoid using any other open source libraries. 
 
 - [x] Connect to an arbitrary website (http/s)
 - [x] Search for all links on this site referring to other pages of the same domain (website) and collect them
-- [ ] for each collected link start over with (1) - we would like to see some multithreading here since network tends to be slow
+- [ ] for each collected link start over with (1) -
+- [ ] we would like to see some multithreading here since network tends to be slow
 - [ ] When finished, output the full collection of links sorted by the link label
   
 Result: collection of links for an arbitrary website (e.g.,
