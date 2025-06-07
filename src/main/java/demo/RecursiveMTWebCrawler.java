@@ -45,8 +45,7 @@ public class RecursiveMTWebCrawler extends RecursiveAction {
         }
         while(!queue.isEmpty() && counter > 0) {
             counter--;
-            RecursiveMTWebCrawler recursiveMTWebCrawler = new RecursiveMTWebCrawler(queue, queue.poll(), resultURLs, counter, brokenLinks);
-            recursiveMTWebCrawler.compute();
+            invokeAll(new RecursiveMTWebCrawler(queue, queue.poll(), resultURLs, counter, brokenLinks));
         }
     }
 

@@ -29,12 +29,11 @@ public class MultiThreadingWebcrawler {
                 + "available");
         results.put(startingPoint, new Link(startingPoint, startingPoint));
         RecursiveMTWebCrawler recursiveMTWebCrawler = new RecursiveMTWebCrawler(queue, startingPoint, results, 8, resultURls);
-        recursiveMTWebCrawler.compute();
-//        computeClass.lookForLinksIn(startingPoint);
+
         ForkJoinPool forkJoinPool = new ForkJoinPool();
 
         long startTime = System.currentTimeMillis();
-//        forkJoinPool.invoke(computeClass);
+        forkJoinPool.invoke(recursiveMTWebCrawler);
         long endTime = System.currentTimeMillis();
 
         System.out.println("Link look up took " + (endTime - startTime) +
