@@ -16,48 +16,34 @@ import java.net.URLConnection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ForkJoinPool;
 
 public class WebcrawlerApplication {
 
 	public static void main(String[] args) {
-		System.out.println("Hello World");
-		try {
-			URL url = URI.create("https://www.geeksforgeeks.org/").toURL();
-			URLConnection connection = url.openConnection();
-			connection.connect();
 
-			BufferedReader in = new BufferedReader(
-					new InputStreamReader((InputStream) connection.getContent()));
-			String content = "";
-			String current;
-			Set<String> urls = Collections.synchronizedSet(new HashSet<>());
-			HTMLEditorKit htmlEditorKit = new HTMLEditorKit();
-			HTMLDocument defaultDocument = (HTMLDocument)htmlEditorKit.createDefaultDocument();
-			htmlEditorKit.read(in,defaultDocument,0);
-			HTMLDocument.Iterator it = defaultDocument.getIterator(HTML.Tag.A);
-			while (it.isValid()) {
-				SimpleAttributeSet s = (SimpleAttributeSet)it.getAttributes();
+		String urlString = "https://orf.at/";
+//		String urlString = "https://ecosio.com/en/";
+//		String urlString = "https://www.geeksforgeeks.org/";
+		System.out.println(urlString);
 
-				String link = (String)s.getAttribute(HTML.Attribute.HREF);
-				if (link != null) {
-					// Add the link to the result list
-					System.out.println(link);
-					//System.out.println("link print finished");
-					urls.add(link);
-				}
-				//System.out.println(link);
-				it.next();
-			}
+		System.out.println("------------------------------------------------");
+		lookupLinks(urlString);
+	}
 
-			//System.out.println(content);
+	public static Set<String> lookupLinks(String urlString) {
 
-			System.out.println("Connection Successful");
-		}
-		catch (Exception e) {
-			System.out.println(e);
-			System.out.println("Internet Not Connected");
-		}
+		ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
+		queue.add(urlString);
+		RecursiveWebCrawler recursiveWebCrawler = new RecursiveWebCrawler(queue);
+		recursiveWebCrawler.compute();
 
+
+		Set<String> urls = Collections.synchronizedSet(new HashSet<>());
+
+
+		return urls;
 	}
 
 }

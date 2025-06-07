@@ -1,6 +1,6 @@
 package demo.recursion;
 
-import org.example.Link;
+import demo.Link;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
