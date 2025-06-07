@@ -28,23 +28,23 @@ public class MultiThreadingWebcrawler {
 
         Set<String> resultURls = Collections.synchronizedSet(new HashSet<>());
         Map<String, Link> results = Collections.synchronizedMap(new HashMap<>());
-        ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
         int processors = Runtime.getRuntime().availableProcessors();
         System.out.println(Integer.toString(processors) + " processor"
                 + (processors != 1 ? "s are " : " is ")
                 + "available");
         results.put(startingPoint, new Link(startingPoint, startingPoint));
 
-        ExecutorService executorService = Executors.newFixedThreadPool(4);
-        RecursiveMTWebCrawler recursiveMTWebCrawler = new RecursiveMTWebCrawler(queue, startingPoint, results, 6, resultURls, executorService);
+        int nThreads = 4;
+        LinkedBlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>();
+        ExecutorService executorService = new ThreadPoolExecutor(nThreads, nThreads,
+                0L, TimeUnit.MILLISECONDS,
+                workQueue);
+
+        RecursiveMTWebCrawler recursiveMTWebCrawler = new RecursiveMTWebCrawler(startingPoint, results, 6, resultURls, executorService);
         executorService.submit(recursiveMTWebCrawler);
-        try {
-            executorService.awaitTermination(5, TimeUnit.MINUTES);
-            System.out.println("unprocessed queue " + queue.size());
-            executorService.shutdown();
-        } catch (InterruptedException e) {
-            System.out.println(e);
-        }
+
+        ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+        scheduledExecutorService.scheduleAtFixedRate(new QueueChecker(workQueue, executorService), 30, 30, TimeUnit.SECONDS);
 
         return results.keySet().stream().toList();
     }

@@ -2,7 +2,6 @@ package demo;
 
 import org.apache.logging.log4j.util.Strings;
 
-import javax.swing.text.BadLocationException;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.html.HTML;
 import javax.swing.text.html.HTMLDocument;
@@ -15,16 +14,15 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.RecursiveAction;
 
 public class RecursiveMTWebCrawler implements Runnable {
 
     private final ExecutorService executorService;
     private Map<String, Link> resultURLs;
-    private ConcurrentLinkedQueue<String> queue;
 
     private Set<String> brokenLinks;
 
@@ -32,8 +30,7 @@ public class RecursiveMTWebCrawler implements Runnable {
     private int counter;
 
 
-    public RecursiveMTWebCrawler(ConcurrentLinkedQueue<String> queue, String start, Map<String, Link> resultURLs, int counter, Set<String> brokenLinks, ExecutorService executorService) {
-        this.queue = queue;
+    public RecursiveMTWebCrawler(String start, Map<String, Link> resultURLs, int counter, Set<String> brokenLinks, ExecutorService executorService) {
         this.start = start;
         this.resultURLs = resultURLs;
         this.counter = counter;
@@ -43,7 +40,7 @@ public class RecursiveMTWebCrawler implements Runnable {
 
 
     public List<String> lookupLinks(String urlString) {
-        System.out.println("processing " + urlString);
+
         URL url = null;
         URLConnection connection = null;
         try {
@@ -66,6 +63,7 @@ public class RecursiveMTWebCrawler implements Runnable {
             htmlEditorKit.read(in, defaultDocument, 0);
             //find baseHref
             HTMLDocument.Iterator it = defaultDocument.getIterator(HTML.Tag.A);
+            counter--;
             while (it.isValid()) {
                 SimpleAttributeSet s = (SimpleAttributeSet) it.getAttributes();
 
@@ -79,13 +77,11 @@ public class RecursiveMTWebCrawler implements Runnable {
                     if (link.startsWith("https://orf.at") && !brokenLinks.contains(link) && !resultURLs.containsKey(link)) {
                         // Add the link to the result list
                         resultURLs.put(link, new Link(link, linkText));
-                        queue.add(link);
+                        executorService.submit(new RecursiveMTWebCrawler(link, resultURLs, counter, brokenLinks, executorService));
                     }
                 }
-
                 it.next();
             }
-            in.close();
 
         } catch (Exception e) {
             brokenLinks.add(urlString);
@@ -98,16 +94,11 @@ public class RecursiveMTWebCrawler implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("Processing " + start + " in " + Thread.currentThread().getName());
-        if (Strings.isNotBlank(start)) {
+
+        if (Strings.isNotBlank(start) && counter > 0) {
             lookupLinks(start);
         }
-        counter--;
-        while (!queue.isEmpty() && counter > 0) {
-            executorService.submit(new RecursiveMTWebCrawler(queue, queue.poll(), resultURLs, counter, brokenLinks, executorService));
-        }
-
-        System.out.println("in queue: " + queue.size() + " results: " + resultURLs.size() + " counter: " + counter + " brokenLinks: " + brokenLinks.size());
+        System.out.println(" results: " + resultURLs.size() + " counter: " + counter + " brokenLinks: " + brokenLinks.size());
     }
 
 }
