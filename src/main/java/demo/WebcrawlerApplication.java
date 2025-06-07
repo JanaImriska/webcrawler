@@ -36,9 +36,12 @@ public class WebcrawlerApplication {
 
 		ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
 		queue.add(urlString);
-		RecursiveWebCrawler recursiveWebCrawler = new RecursiveWebCrawler(queue);
+		RecursiveWebCrawler recursiveWebCrawler = new RecursiveWebCrawler(queue,3);
+		long startTime = System.currentTimeMillis();
 		recursiveWebCrawler.compute();
-
+		long endTime = System.currentTimeMillis();
+		System.out.println("Link look up took " + (endTime - startTime) +
+				" milliseconds.");
 
 		Set<String> urls = Collections.synchronizedSet(new HashSet<>());
 

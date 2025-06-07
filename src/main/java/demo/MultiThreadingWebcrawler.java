@@ -2,50 +2,45 @@ package demo;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 public class MultiThreadingWebcrawler {
 
     public static void main(String[] args) {
 
-        String startingPoint = "https://www.geeksforgeeks.org/";
+        String startingPoint = "https://orf.at/";
         System.out.println(startingPoint);
         System.out.println("------------------------------------------------");
-        Set<String> lookupedLinks = lookupLinks(startingPoint);
-        System.out.println(lookupedLinks);
+        List<String> lookupedLinks = lookupLinks(startingPoint);
 
-//        Set<Link> links = Collections.synchronizedSet(lookupedLinks);
-//        List<Link> sortedLinks = new ArrayList<>(links);
-//        sortedLinks.sort(new Comparator<Object>() {
-//            @Override
-//            public int compare(Object o1, Object o2) {
-//                return ((Link) o1).getTitle().compareTo(((Link) o2).getTitle());
-//            }
-//        });
-//        System.out.println(sortedLinks);
+        List<String> sortedList = lookupedLinks.stream().sorted().collect(Collectors.toList());
+
+        System.out.println(sortedList);
     }
 
-    public static Set<String> lookupLinks(String startingPoint) {
+    public static List<String> lookupLinks(String startingPoint) {
 
         Set<String> resultURls = Collections.synchronizedSet(new HashSet<>());
-        ConcurrentLinkedQueue<Link> toComputeQueue = new ConcurrentLinkedQueue<>();
+        Map<String, Link> results = Collections.synchronizedMap(new HashMap<>());
+        ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
         int processors = Runtime.getRuntime().availableProcessors();
         System.out.println(Integer.toString(processors) + " processor"
                 + (processors != 1 ? "s are " : " is ")
                 + "available");
-        toComputeQueue.add(new Link(startingPoint, startingPoint));
-        RecursiveLinkLookup computeClass = new RecursiveLinkLookup(toComputeQueue, resultURls);
-
-        computeClass.lookForLinksIn(startingPoint);
+        results.put(startingPoint, new Link(startingPoint, startingPoint));
+        RecursiveMTWebCrawler recursiveMTWebCrawler = new RecursiveMTWebCrawler(queue, startingPoint, results, 8, resultURls);
+        recursiveMTWebCrawler.compute();
+//        computeClass.lookForLinksIn(startingPoint);
         ForkJoinPool forkJoinPool = new ForkJoinPool();
 
         long startTime = System.currentTimeMillis();
-        forkJoinPool.invoke(computeClass);
+//        forkJoinPool.invoke(computeClass);
         long endTime = System.currentTimeMillis();
 
         System.out.println("Link look up took " + (endTime - startTime) +
                 " milliseconds.");
 
-        return resultURls;
+        return results.keySet().stream().toList();
     }
 
 
