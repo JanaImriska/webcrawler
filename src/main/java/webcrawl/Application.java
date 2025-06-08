@@ -13,7 +13,7 @@ public class Application {
         String startingPoint = scanner.nextLine();
         if (!isValidURL(startingPoint)) {
             System.out.println("The URL is not valid, a default URL will be used.");
-            startingPoint = "https://orf.at/";
+            startingPoint = "https://crawler-test.com";
         }
         System.out.println("valid URL:" + startingPoint);
         WebCrawler.setBaseRef(startingPoint);
